@@ -3,10 +3,10 @@ from rouge import Rouge, FilesRouge
 rouge = Rouge()
 
 # the path of the gold
-hyp_path = './test.txt.tgt'
+hyp_path = 'data/test.txt.tgt'
 
 # the path of the prediction
-ref_path = './summaries.txt'
+ref_path = 'data/summaries.txt'
 
 hypothesis = []
 with open(hyp_path, 'r') as f:

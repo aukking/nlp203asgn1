@@ -1,28 +1,15 @@
-from torchtext.datasets import Multi30k
+import torch.utils.data
 
 from methods import *
-from torchtext.data import Field, BucketIterator
-
-
-def tokenize_de(text):
-    """
-    Tokenizes German text from a string into a list of strings
-    """
-    return [tok.text for tok in spacy_de.tokenizer(text)]
-
-def tokenize_en(text):
-    """
-    Tokenizes English text from a string into a list of strings
-    """
-    return [tok.text for tok in spacy_en.tokenizer(text)]
-
+from data_processing import *
 
 N_EPOCHS = 10
 CLIP = 1
-best_valid_loss = float('inf')
+best_valid_loss = float("inf")
 
-BATCH_SIZE = 128
-
+BATCH_SIZE = 8
+UNK_THRESH = 2
+TRAIN = True
 SEED = 1234
 
 random.seed(SEED)
@@ -31,72 +18,86 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
-spacy_de = spacy.load('de_core_news_sm')
-spacy_en = spacy.load('en_core_web_sm')
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-SRC = Field(tokenize = tokenize_de,
-            init_token = '<sos>',
-            eos_token = '<eos>',
-            lower = True,
-            include_lengths = True)
+samples = 10000
+train_data_sources = get_data('data/train.txt.src', samples)
+train_data_targets = get_data('data/train.txt.tgt', samples)
+word2idx, id2word = generate_vocab(train_data_sources + train_data_targets, UNK_THRESH)
 
-TRG = Field(tokenize = tokenize_en,
-            init_token = '<sos>',
-            eos_token = '<eos>',
-            lower = True)
-train_data, valid_data, test_data = Multi30k.splits(exts = ('.de', '.en'),
-                                                    fields = (SRC, TRG))
+val_data_sources = get_data('data/val.txt.src', samples)
+val_data_targets = get_data('data/val.txt.tgt', samples)
 
-SRC.build_vocab(train_data, min_freq = 2)
-TRG.build_vocab(train_data, min_freq = 2)
-
-train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
-    (train_data, valid_data, test_data),
-     batch_size = BATCH_SIZE,
-     sort_within_batch = True,
-     sort_key = lambda x : len(x.src),
-     device = device)
-
-INPUT_DIM = len(SRC.vocab)
-OUTPUT_DIM = len(TRG.vocab)
-ENC_EMB_DIM = 256
-DEC_EMB_DIM = 256
-ENC_HID_DIM = 512
-DEC_HID_DIM = 512
+INPUT_DIM = len(word2idx)
+OUTPUT_DIM = len(word2idx)
+ENC_EMB_DIM = 64
+DEC_EMB_DIM = 64
+ENC_HID_DIM = 128
+DEC_HID_DIM = 128
 ENC_DROPOUT = 0.5
 DEC_DROPOUT = 0.5
-SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
+BEAM_SIZE = 2
+MAX_SEQ_LEN = 20
+# the last item in the word2idx will be the pad token
+PAD_IDX = 3
+UNK_IDX = 0
+SOS_IDX = 1
+EOS_IDX = 2
+
+train_dataset = TrainDataset(train_data_sources, train_data_targets, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
+# val_dataset = TrainDataset(val_data_sources, val_data_targets, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=lambda batch: prepare_batch(batch, PAD_IDX))
+# val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, collate_fn=lambda batch: prepare_batch(batch, PAD_IDX))
 
 attn = Attention(ENC_HID_DIM, DEC_HID_DIM)
 enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn)
 
-model = Seq2Seq(enc, dec, SRC_PAD_IDX, device).to(device)
 
-optimizer = optim.Adam(model.parameters())
-TRG_PAD_IDX = TRG.vocab.stoi[TRG.pad_token]
 
-criterion = nn.CrossEntropyLoss(ignore_index = TRG_PAD_IDX)
+if TRAIN:
+    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(
+        device)
+    print("device:", device)
+    print("parameters:", count_parameters(model))
+    optimizer = optim.Adam(model.parameters())
+    criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+    for epoch in range(N_EPOCHS):
 
-print('device:', device)
-print('parameters:', count_parameters(model))
+        start_time = time.time()
 
-for epoch in range(N_EPOCHS):
+        train_loss = train(model, train_loader, optimizer, criterion, CLIP, device)
+        # valid_loss = evaluate(model, val_loader, criterion, device)
 
-    start_time = time.time()
+        end_time = time.time()
 
-    train_loss = train(model, train_iterator, optimizer, criterion, CLIP)
-    valid_loss = evaluate(model, valid_iterator, criterion)
+        epoch_mins, epoch_secs = epoch_time(start_time, end_time)
 
-    end_time = time.time()
+        # if valid_loss < best_valid_loss:
+        #     best_valid_loss = valid_loss
+        #     torch.save(model.state_dict(), "tut4-model.pt")
+        #     print('saved new model')
 
-    epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+        print(f"Epoch: {epoch + 1:02} | Time: {epoch_mins}m {epoch_secs}s")
+        print(f"\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}")
+        # print(f"\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}")
+    torch.save(model.state_dict(), 'models/new_model.pt')
+else:
+    # device = 'cpu'
+    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(
+        device)
+    print("device:", device)
+    print("parameters:", count_parameters(model))
+    model.load_state_dict(torch.load('models/new_model.pt'))
 
-    if valid_loss < best_valid_loss:
-        best_valid_loss = valid_loss
-        torch.save(model.state_dict(), 'tut4-model.pt')
+    test_data_sources = get_data('data/test.txt.src', 2)
+    test_dataset = TestDataset(test_data_sources, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
-    print(f'Epoch: {epoch + 1:02} | Time: {epoch_mins}m {epoch_secs}s')
-    print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-    print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+    preds = predict(model, test_loader, device)
+    predictions = [decode_prediction_beam(p, id2word) for p in preds]
+    for x, item in enumerate(test_loader):
+        # print(item[0])
+        print(predictions[x])
+        print('~~~~~~~~~~~~~~~~~~~~~')

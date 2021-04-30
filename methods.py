@@ -1,18 +1,18 @@
 from models import *
+from tqdm import tqdm
 
-
-def train(model, iterator, optimizer, criterion, clip):
+def train(model, iterator, optimizer, criterion, clip, device):
     model.train()
 
     epoch_loss = 0
 
-    for i, batch in enumerate(iterator):
-        src, src_len = batch.src
-        trg = batch.trg
+    for i, batch in enumerate(tqdm(iterator)):
+        src = batch[0].to(device)
+        trg = batch[1].to(device)
 
         optimizer.zero_grad()
 
-        output = model(src, src_len, trg)
+        output = model(src, trg)
 
         # trg = [trg len, batch size]
         # output = [trg len, batch size, output dim]
@@ -38,21 +38,19 @@ def train(model, iterator, optimizer, criterion, clip):
     return epoch_loss / len(iterator)
 
 
-def evaluate(model, iterator, criterion):
+def evaluate(model, iterator, criterion, device):
     model.eval()
 
     epoch_loss = 0
 
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            src, src_len = batch.src
-            trg = batch.trg
-
-            output = model(src, src_len, trg, 0)  # turn off teacher forcing
+            src = batch[0].to(device)
+            trg = batch[1].to(device)
+            output = model(src, trg, teacher_forcing_ratio=0)  # turn off teacher forcing
 
             # trg = [trg len, batch size]
             # output = [trg len, batch size, output dim]
-
             output_dim = output.shape[-1]
 
             output = output[1:].view(-1, output_dim)
@@ -68,6 +66,18 @@ def evaluate(model, iterator, criterion):
     return epoch_loss / len(iterator)
 
 
+def predict(model, loader, device):
+    outputs = []
+    model.eval()
+
+    with torch.no_grad():
+        for x, batch in enumerate(tqdm(loader)):
+            src = batch[0].unsqueeze(dim=0).to(device)
+            logits = model(src, src, teacher_forcing_ratio=0)
+            outputs.append(logits)
+    return outputs
+
+
 def epoch_time(start_time, end_time):
     elapsed_time = end_time - start_time
     elapsed_mins = int(elapsed_time / 60)
@@ -77,3 +87,21 @@ def epoch_time(start_time, end_time):
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def decode_prediction_beam(pred, vocab):
+    predicted_sent = []
+    for i, p in enumerate(pred):
+        predicted_sent.append(vocab[int(p.item())])
+
+    string = ''
+    word = predicted_sent[0]
+    count = 1
+    while word != '<eos>' and count < len(predicted_sent):
+        string += word + ' '
+        word = predicted_sent[count]
+        count += 1
+
+    string = string[:-1]
+
+    return string
