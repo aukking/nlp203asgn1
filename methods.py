@@ -92,7 +92,7 @@ def count_parameters(model):
 def decode_prediction_beam(pred, vocab):
     predicted_sent = []
     for i, p in enumerate(pred):
-        predicted_sent.append(vocab[int(p.item())])
+        predicted_sent.append(vocab[int(p)])
 
     string = ''
     word = predicted_sent[0]

@@ -237,7 +237,7 @@ class Seq2Seq(nn.Module):
                 input = trg[t] if teacher_force else top1
 
         else:
-            outputs = torch.zeros(self.max_seq_length).to(self.device)
+            outputs = []
             # first input to the decoder is the <sos> tokens
             input = torch.tensor([self.sos]).to(self.device)
             counter = 0
@@ -247,11 +247,9 @@ class Seq2Seq(nn.Module):
                 # receive output tensor (predictions) and new hidden and cell states
                 output, hidden, _ = self.decoder(input, hidden, encoder_outputs, mask)
 
-                softy = nn.Softmax(dim=1)
-                output_probs = softy(output)
                 # place predictions in a tensor holding predictions for each token
-                top1 = output_probs.argmax(1)
-                outputs[counter] = top1.item()
+                top1 = output.argmax(1)
+                outputs.append(top1.item())
                 # get the highest predicted token from our predictions
 
                 # if teacher forcing, use actual next token as next input
