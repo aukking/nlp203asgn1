@@ -7,9 +7,9 @@ N_EPOCHS = 10
 CLIP = 1
 best_valid_loss = float("inf")
 
-BATCH_SIZE = 8
-UNK_THRESH = 2
-TRAIN = True
+BATCH_SIZE = 32 
+UNK_THRESH = 4
+TRAIN = False 
 SEED = 1234
 
 random.seed(SEED)
@@ -20,7 +20,7 @@ torch.backends.cudnn.deterministic = True
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-samples = 10000
+samples = 10000 
 train_data_sources = get_data('data/train.txt.src', samples)
 train_data_targets = get_data('data/train.txt.tgt', samples)
 word2idx, id2word = generate_vocab(train_data_sources + train_data_targets, UNK_THRESH)
@@ -91,7 +91,7 @@ else:
     print("parameters:", count_parameters(model))
     model.load_state_dict(torch.load('models/new_model.pt'))
 
-    test_data_sources = get_data('data/test.txt.src', 2)
+    test_data_sources = get_data('data/test.txt.src', 1)
     test_dataset = TestDataset(test_data_sources, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
