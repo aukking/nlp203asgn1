@@ -8,7 +8,7 @@ CLIP = 1
 best_valid_loss = float("inf")
 
 BATCH_SIZE = 8
-UNK_THRESH = 2
+UNK_THRESH = 10
 TRAIN = True
 SEED = 1234
 
@@ -23,7 +23,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 samples = 10000
 train_data_sources = get_data('data/train.txt.src', samples)
 train_data_targets = get_data('data/train.txt.tgt', samples)
-word2idx, id2word = generate_vocab(train_data_sources + train_data_targets, UNK_THRESH)
+word2idx, id2word = generate_vocab(train_data_sources, UNK_THRESH)
 
 val_data_sources = get_data('data/val.txt.src', samples)
 val_data_targets = get_data('data/val.txt.tgt', samples)
