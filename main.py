@@ -27,10 +27,10 @@ word2idx, id2word = generate_vocab(train_data_sources, UNK_THRESH)
 
 INPUT_DIM = len(word2idx)
 OUTPUT_DIM = len(word2idx)
-ENC_EMB_DIM = 64
-DEC_EMB_DIM = 64
-ENC_HID_DIM = 128
-DEC_HID_DIM = 128
+ENC_EMB_DIM = 32
+DEC_EMB_DIM = 32
+ENC_HID_DIM = 64 
+DEC_HID_DIM = 64
 ENC_DROPOUT = 0.5
 DEC_DROPOUT = 0.5
 BEAM_SIZE = 2
