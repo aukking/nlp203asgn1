@@ -3,7 +3,7 @@ import torch.utils.data
 from methods import *
 from data_processing import *
 
-N_EPOCHS = 10
+N_EPOCHS = 5
 CLIP = 1
 best_valid_loss = float("inf")
 
@@ -50,8 +50,7 @@ enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn)
 
 if TRAIN:
-    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN)
-    model = torch.nn.DataParallel(model).cuda()
+    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(device)
     print("device:", device)
     print("parameters:", count_parameters(model))
     optimizer = optim.Adam(model.parameters())
