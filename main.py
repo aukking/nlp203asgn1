@@ -21,7 +21,8 @@ torch.backends.cudnn.deterministic = True
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 samples = -1
-train_data_sources = get_data('data/train.txt.src', samples)
+src_truncate = 400
+train_data_sources = get_data('data/train.txt.src', samples, src_truncate)
 train_data_targets = get_data('data/train.txt.tgt', samples)
 word2idx, id2word = generate_vocab(train_data_sources, UNK_THRESH)
 

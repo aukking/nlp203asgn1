@@ -2,12 +2,14 @@ from torch.utils.data import Dataset
 import torch
 from collections import defaultdict
 
-def get_data(filename, samples=-1):
+def get_data(filename, samples=-1, truncation=-1):
     f = open(filename, mode='r', encoding='utf-8')
     sentences = []
     counter = 0
     for row in f:
-        sentences.append(row.split())
+        sentence = row.split()
+        end_idx = min(truncation, len(sentence)-1)
+        sentences.append(sentence[:end_idx])
         counter += 1
         if counter == samples:
             break

@@ -21,7 +21,7 @@ class Encoder(nn.Module):
 
         self.embedding = nn.Embedding(input_dim, emb_dim)
 
-        self.rnn = nn.LSTM(emb_dim, enc_hid_dim, bidirectional=True)
+        self.rnn = nn.GRU(emb_dim, enc_hid_dim, bidirectional=True)
 
         self.fc = nn.Linear(enc_hid_dim * 2, dec_hid_dim)
 
@@ -38,7 +38,7 @@ class Encoder(nn.Module):
         # need to explicitly put lengths on cpu!
         # packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, src_len.to('cpu'), enforce_sorted=False)
 
-        outputs, (hidden, _) = self.rnn(embedded)
+        outputs, hidden = self.rnn(embedded)
         # packed_outputs is a packed sequence containing all hidden states
         # hidden is now from the final non-padded element in the batch
 
