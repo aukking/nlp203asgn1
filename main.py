@@ -7,7 +7,7 @@ N_EPOCHS = 5
 CLIP = 1
 best_valid_loss = float("inf")
 
-BATCH_SIZE = 32
+BATCH_SIZE = 128 
 UNK_THRESH = 10
 TRAIN = True
 SEED = 1234
@@ -18,7 +18,7 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 samples = -1
 src_truncate = 400
