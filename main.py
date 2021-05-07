@@ -7,7 +7,7 @@ N_EPOCHS = 5
 CLIP = 1
 best_valid_loss = float("inf")
 
-BATCH_SIZE = 128 
+BATCH_SIZE = 128
 UNK_THRESH = 10
 TRAIN = True
 SEED = 1234
@@ -30,7 +30,7 @@ INPUT_DIM = len(word2idx)
 OUTPUT_DIM = len(word2idx)
 ENC_EMB_DIM = 32
 DEC_EMB_DIM = 32
-ENC_HID_DIM = 64 
+ENC_HID_DIM = 64
 DEC_HID_DIM = 64
 ENC_DROPOUT = 0.5
 DEC_DROPOUT = 0.5
@@ -44,20 +44,21 @@ EOS_IDX = 2
 
 train_dataset = TrainDataset(train_data_sources, train_data_targets, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=lambda batch: prepare_batch(batch, PAD_IDX))
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                                           collate_fn=lambda batch: prepare_batch(batch, PAD_IDX))
 
 attn = Attention(ENC_HID_DIM, DEC_HID_DIM)
 enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn)
 
 if TRAIN:
-    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(device)
+    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(
+        device)
     print("device:", device)
     print("parameters:", count_parameters(model))
     optimizer = optim.Adam(model.parameters())
     criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
     for epoch in range(N_EPOCHS):
-
         start_time = time.time()
         train_loss = train(model, train_loader, optimizer, criterion, CLIP, device)
         end_time = time.time()
