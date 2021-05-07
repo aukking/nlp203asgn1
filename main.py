@@ -3,13 +3,13 @@ import torch.utils.data
 from methods import *
 from data_processing import *
 
-N_EPOCHS = 5
+N_EPOCHS = 10
 CLIP = 1
 best_valid_loss = float("inf")
 
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 UNK_THRESH = 10
-TRAIN = True
+TRAIN = False
 SEED = 1234
 
 random.seed(SEED)
@@ -18,12 +18,13 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 samples = -1
 src_truncate = 400
+trg_truncate = 100
 train_data_sources = get_data('data/train.txt.src', samples, src_truncate)
-train_data_targets = get_data('data/train.txt.tgt', samples)
+train_data_targets = get_data('data/train.txt.tgt', samples, trg_truncate)
 word2idx, id2word = generate_vocab(train_data_sources, UNK_THRESH)
 
 INPUT_DIM = len(word2idx)
@@ -34,7 +35,7 @@ ENC_HID_DIM = 64
 DEC_HID_DIM = 64
 ENC_DROPOUT = 0.5
 DEC_DROPOUT = 0.5
-BEAM_SIZE = 2
+BEAM_SIZE = 5
 MAX_SEQ_LEN = 200
 # the last item in the word2idx will be the pad token
 PAD_IDX = 3
@@ -51,9 +52,10 @@ attn = Attention(ENC_HID_DIM, DEC_HID_DIM)
 enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, ENC_DROPOUT)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, DEC_DROPOUT, attn)
 
+model = Seq2SeqBeam(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(
+    device)
+
 if TRAIN:
-    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(
-        device)
     print("device:", device)
     print("parameters:", count_parameters(model))
     optimizer = optim.Adam(model.parameters())
@@ -67,14 +69,11 @@ if TRAIN:
 
         print(f"Epoch: {epoch + 1:02} | Time: {epoch_mins}m {epoch_secs}s")
         print(f"\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}")
-    torch.save(model.state_dict(), 'models/new_model2.pt')
+        torch.save(model.state_dict(), 'models/debug_model.pt')
 else:
-    # device = 'cpu'
-    model = Seq2Seq(enc, dec, PAD_IDX, device, SOS_IDX, EOS_IDX, beam_size=BEAM_SIZE, max_seq_len=MAX_SEQ_LEN).to(
-        device)
     print("device:", device)
     print("parameters:", count_parameters(model))
-    model.load_state_dict(torch.load('models/new_model2.pt'))
+    model.load_state_dict(torch.load('models/new_model3.pt'))
 
     test_data_sources = get_data('data/test.txt.src', 1)
     test_dataset = TestDataset(test_data_sources, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
@@ -82,5 +81,5 @@ else:
 
     preds = predict(model, test_loader, device)
     predictions = [decode_prediction_beam(p, id2word) for p in preds]
-    print(test_data_sources[0])
-    print(predictions[0])
+    # print(test_data_sources[0])
+    print(predictions)
