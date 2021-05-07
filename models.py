@@ -21,7 +21,7 @@ class Encoder(nn.Module):
 
         self.embedding = nn.Embedding(input_dim, emb_dim)
 
-        self.rnn = nn.GRU(emb_dim, enc_hid_dim, bidirectional=True)
+        self.rnn = nn.GRU(emb_dim, enc_hid_dim, num_layers=2, bidirectional=True)
 
         self.fc = nn.Linear(enc_hid_dim * 2, dec_hid_dim)
 
@@ -110,7 +110,7 @@ class Decoder(nn.Module):
 
         self.embedding = nn.Embedding(output_dim, emb_dim)
 
-        self.rnn = nn.GRU((enc_hid_dim * 2) + emb_dim, dec_hid_dim)
+        self.rnn = nn.GRU((enc_hid_dim * 2) + emb_dim, dec_hid_dim, num_layers=1)
 
         self.fc_out = nn.Linear((enc_hid_dim * 2) + dec_hid_dim + emb_dim, output_dim)
 

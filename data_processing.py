@@ -1,12 +1,16 @@
 from torch.utils.data import Dataset
 import torch
-from collections import defaultdict
+from collections import defaultdict, Counter
+import pickle
+from torchtext.vocab import Vocab
+from tqdm import tqdm
+
 
 def get_data(filename, samples=-1, truncation=-1):
     f = open(filename, mode='r', encoding='utf-8')
     sentences = []
     counter = 0
-    for row in f:
+    for x, row in enumerate(tqdm(f)):
         sentence = row.split()
         end_idx = min(truncation, len(sentence)-1)
         sentences.append(sentence[:end_idx])
@@ -37,6 +41,29 @@ def generate_vocab(sentences, unk_thresh=1):
             id2word.append(key)
 
     return word2idx, id2word
+
+
+def build_vocabulary(sentences, vocab_size: int, vocab_file: str = None, load: bool = False):
+    if load and vocab_file:
+        with open(vocab_file, 'rb') as file:
+            vocab = pickle.load(file)
+            return vocab
+
+    counts = Counter()
+
+    for x, sentence in enumerate(tqdm(sentences)):
+        counts.update(sentence)
+
+    vocab = Vocab(
+        counter=counts,
+        max_size=vocab_size,
+        specials=('<UNK>', '<SOS>', '<EOS>', '<PAD>'),
+    )
+
+    if vocab_file:
+        with open(vocab_file, "wb") as v:
+            pickle.dump(vocab, v)
+    return vocab
 
 
 def prepare_batch(batch, pad_idx):
