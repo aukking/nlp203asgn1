@@ -86,6 +86,14 @@ def prepare_batch(batch, pad_idx):
     return sources_tensor, targets_tensor
 
 
+def save_results(filename, sentences):
+    print('saving results...')
+    with open(filename, 'w') as file:
+        for x, sentence in enumerate(tqdm(sentences)):
+            file.write(sentence)
+            file.write('\n')
+
+
 class TrainDataset(Dataset):
     def __init__(self, sources, targets, vocab, unk_idx, sos_idx, eos_idx):
         self.sources = sources

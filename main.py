@@ -3,12 +3,12 @@ import torch.utils.data
 from methods import *
 from data_processing import *
 
-N_EPOCHS = 10
+N_EPOCHS = 1
 CLIP = 1
 
 BATCH_SIZE = 64
 UNK_THRESH = 0
-TRAIN = True
+TRAIN = False
 SEED = 1234
 
 random.seed(SEED)
@@ -22,7 +22,7 @@ if TRAIN:
 else:
     device = torch.device('cpu')
 
-samples = -1
+samples = 1
 src_truncate = 400
 trg_truncate = 100
 train_data_sources = get_data('data/train.txt.src', samples, src_truncate)
@@ -77,17 +77,18 @@ if TRAIN:
 
         print(f"Epoch: {epoch + 1:02} | Time: {epoch_mins}m {epoch_secs}s")
         print(f"\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}")
-        torch.save(model.state_dict(), 'models/new_model4.pt')
+        torch.save(model.state_dict(), 'models/tempo_model.pt')
 else:
     print("device:", device)
     print("parameters:", count_parameters(model))
-    model.load_state_dict(torch.load('models/debug_model.pt'))
+    model.load_state_dict(torch.load('models/tempo_model.pt'))
 
     test_data_sources = get_data('data/test.txt.src', 1)
-    test_dataset = TestDataset(train_data_sources, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
+    test_dataset = TestDataset(test_data_sources, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
     preds = predict(model, test_loader, device)
     predictions = [decode_prediction_beam(p, id2word) for p in preds]
     # print(test_data_sources[0])
-    print(predictions)
+    # print(predictions)
+    save_results('data/summaries.txt', predictions)
