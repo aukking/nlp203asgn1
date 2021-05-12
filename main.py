@@ -17,10 +17,7 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
-if TRAIN:
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-else:
-    device = torch.device('cpu')
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
 samples = 1
 src_truncate = 400
@@ -81,9 +78,9 @@ if TRAIN:
 else:
     print("device:", device)
     print("parameters:", count_parameters(model))
-    model.load_state_dict(torch.load('models/tempo_model.pt'))
+    model.load_state_dict(torch.load('models/new_model4.pt'))
 
-    test_data_sources = get_data('data/test.txt.src', 1)
+    test_data_sources = get_data('data/test.txt.src', -1)
     test_dataset = TestDataset(test_data_sources, word2idx, UNK_IDX, SOS_IDX, EOS_IDX)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1)
 
